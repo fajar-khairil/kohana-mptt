@@ -69,9 +69,8 @@ class ORM_MPTT extends ORM
 	{
 		// Make sure the specified scope doesn't already exist.
 		$search = ORM_MPTT::factory($this->_object_name)->where($this->scope_column, '=', $scope)->find_all();
-
 		if ($search->count() > 0 )
-			return FALSE;
+			throw new Kohana_Exception('scope :scope already exsists.',array(':scope' => $scope));
 
 		// Create a new root node in the new scope.
 		$this->{$this->left_column} = 1;
@@ -101,10 +100,9 @@ class ORM_MPTT extends ORM
 	protected function lock()
 	{	
 		$lock = $this->_db->query(Database::SELECT, 'SELECT GET_LOCK("' . $this->_db->table_prefix() . $this->_table_name . '", 30) AS l', TRUE);
-
-		if ($lock['l']->l == 0)
+		if ($lock->get('l') == 0)
 			return $this->lock(); // Unable to obtain lock, retry.
-		else if ($lock['l']->l == 1)
+		else if ($lock->get('l') == 1)
 			return $this; // Success
 		else
 			throw new Exception('Unable to obtain MPTT lock'); // Unknown Error handle this.. better
@@ -202,8 +200,8 @@ class ORM_MPTT extends ORM
 	 * @return bool
 	 */
 	public function is_root()
-	{
-		return ($this->{$this->left_column} === 1);
+	{	
+		return (int)$this->{$this->left_column} === 1;
 	}
 
 	/**
@@ -292,12 +290,17 @@ class ORM_MPTT extends ORM
 	{
 		$left_operator = $self ? '>=' : '>';
 		$right_operator = $self ? '<=' : '<';
-
+		
 		return ORM_MPTT::factory($this->_object_name)
 			->where($this->left_column, $left_operator, $this->{$this->left_column})
 			->where($this->right_column, $right_operator, $this->{$this->right_column})
 			->where($this->scope_column, '=', $this->{$this->scope_column})
 			->order_by($this->left_column, $direction);
+	}
+	
+	public function getDescendants($self = FALSE, $direction = 'ASC')
+	{
+		return $this->descendants($self,$direction)->find_all();
 	}
 
 	/**
