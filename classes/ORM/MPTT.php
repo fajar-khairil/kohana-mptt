@@ -225,6 +225,15 @@ class ORM_MPTT extends ORM
 	}
 
 	/**
+	 * Returns all roots node/highest scope
+	 * @return ORM_MPTT
+	 */
+	public function roots()
+	{
+		return ORM_MPTT::factory($this->_object_name)->where($this->left_column, '=', 1);
+	}
+
+	/**
 	 * Returns the parent of the current node.
 	 *
 	 * @access public
@@ -298,6 +307,14 @@ class ORM_MPTT extends ORM
 			->order_by($this->left_column, $direction);
 	}
 	
+	/**
+	 * Returns the descendants of the current node.
+	 *
+	 * @access public
+	 * @param bool $self include the current loaded node?
+	 * @param string $direction direction to order the left column by.
+	 * @return Database_Result
+	 */	
 	public function getDescendants($self = FALSE, $direction = 'ASC')
 	{
 		return $this->descendants($self,$direction)->find_all();
