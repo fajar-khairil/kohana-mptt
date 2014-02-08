@@ -315,7 +315,7 @@ class ORM_MPTT extends ORM
 	 * @param string $direction direction to order the left column by.
 	 * @return Database_Result
 	 */	
-	public function getDescendants($self = FALSE, $direction = 'ASC')
+	public function get_descendants($self = FALSE, $direction = 'ASC')
 	{
 		return $this->descendants($self,$direction)->find_all();
 	}
