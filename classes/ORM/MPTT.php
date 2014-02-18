@@ -200,8 +200,8 @@ class ORM_MPTT extends ORM
 	 * @return bool
 	 */
 	public function is_root()
-	{	
-		return (int)$this->{$this->left_column} === 1;
+	{
+		return ( (int)$this->{$this->left_column} === 1 );
 	}
 
 	/**
