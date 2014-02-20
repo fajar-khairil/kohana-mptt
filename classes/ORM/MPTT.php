@@ -502,9 +502,9 @@ class ORM_MPTT extends ORM
 	public function save(Validation $validation = NULL)
 	{
 		if ($this->loaded() === TRUE)
-			return parent::save();
-
-		return FALSE;
+			return FALSE;
+		else
+			return $this->create($validation);
 	}
 
 	/**
