@@ -194,6 +194,57 @@ class ORM_MPTT extends ORM
 	}
 
 	/**
+	 * make me a root!
+	 *
+	 * @param   scope int scope to check availability (optional)
+	 * @param   validation Validation Object (optional) 
+	 * @return  bool
+	*/
+	public function makeRoot(Validation $validation = NULL,$scope = NULL)
+	{
+		// If node already exists, and already root, exit
+		if ($this->loaded() AND $this->is_root())
+			return $this;
+
+		// delete node space first
+		if ($this->loaded())
+		{
+			$this->delete_space($this->left(), $this->size());
+		}
+
+		if (is_null($scope))
+		{
+			// Increment next scope
+			$scope = $this->getNextScope();
+		}
+		elseif ( ! $this->scope_available($scope))
+		{
+			return FALSE;
+		}
+
+		$this->{$this->scope_column} = $scope;
+		$this->{$this->level_column} = 1;
+		$this->{$this->left_column} = 1;
+		$this->{$this->right_column} = 2;
+
+		return parent::save($validation);		
+	}
+
+	/**
+	 * Checks if the supplied scope is available.
+	 * 
+	 * @access  protected
+	 * @param   int        scope to check availability of
+	 * @return  bool
+	 */
+	protected function scope_available($scope)
+	{
+		return (bool) ! self::factory($this->_object_name)
+			->where($this->scope_column, '=', $scope)
+			->count_all();
+	}
+
+	/**
 	 * Is the current node a root node?
 	 *
 	 * @access public
@@ -444,6 +495,21 @@ class ORM_MPTT extends ORM
 
 		return $this;
 	}
+
+	/**
+	 * Inserts a new node, if target already have children then node will be the last children
+	 *
+	 * @access public
+	 * @param ORM_MPTT $target target node id or ORM_MPTT object.
+	 * @return ORM_MPTT
+	 */
+	public function insert_as_child($target)
+	{
+		if( $target->has_children() )
+			return $this->insert_as_last_child($target);
+		else
+			return $this->insert_as_first_child($target);		
+	}
 	
 	/**
 	 * Inserts a new node to the left of the target node.
@@ -501,10 +567,16 @@ class ORM_MPTT extends ORM
 	 */
 	public function save(Validation $validation = NULL)
 	{
-		if ($this->loaded() === TRUE)
-			return FALSE;
-		else
-			return $this->create($validation);
+		if ( ! $this->loaded())
+		{
+			return $this->makeRoot($validation);
+		}
+		elseif ($this->loaded() === TRUE)
+		{
+			return parent::save($validation);
+		}
+
+		return FALSE;
 	}
 
 	/**
@@ -808,5 +880,22 @@ class ORM_MPTT extends ORM
 		$this->{$this->path_column} = $path;
 
 		return $this;
+	}
+
+	/**
+	* called on makeRoot()
+	* @return integer next scope
+	*/
+	protected function getNextScope()
+	{
+		$scope = DB::select(DB::expr('IFNULL(MAX(`'.$this->scope_column.'`), 0) as scope'))
+						->from($this->_table_name)
+						->execute()
+						->current();
+
+		if ($scope AND intval($scope['scope']) > 0)
+			return intval($scope['scope']) + 1;
+
+		return 1;				
 	}
 }
