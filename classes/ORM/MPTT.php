@@ -12,7 +12,7 @@ class ORM_MPTT extends ORM
 {
 	/**
 	 * @access public
-	 * @var string left column name.
+	 * @var string _left column name.
 	 */
 	public $left_column = 'lft';
 	
@@ -65,27 +65,21 @@ class ORM_MPTT extends ORM
 	 * @param integer $scope New scope to create.
 	 * @return boolean
 	 **/
-	public function new_scope($scope, array $additional_fields = array())
+	public function new_scope($scope = NULL)
 	{
 		// Make sure the specified scope doesn't already exist.
 		$search = ORM_MPTT::factory($this->_object_name)->where($this->scope_column, '=', $scope)->find_all();
 		if ($search->count() > 0 )
 			throw new Kohana_Exception('scope :scope already exsists.',array(':scope' => $scope));
 
+		if( $scope === NULL )
+			$scope = $this->getNextScope();
+
 		// Create a new root node in the new scope.
 		$this->{$this->left_column} = 1;
 		$this->{$this->right_column} = 2;
 		$this->{$this->level_column} = 0;
 		$this->{$this->scope_column} = $scope;
-
-		// Other fields may be required.
-		if ( ! empty($additional_fields))
-		{
-			foreach ($additional_fields as $column => $value)
-			{
-				$this->{$column} = $value;
-			}
-		}
 
 		parent::save();
 
@@ -191,43 +185,6 @@ class ORM_MPTT extends ORM
 			return FALSE;
 
 		return ($this->parent->{$this->_primary_key} === $target->parent->{$this->_primary_key});
-	}
-
-	/**
-	 * make me a root!
-	 *
-	 * @param   scope int scope to check availability (optional)
-	 * @param   validation Validation Object (optional) 
-	 * @return  bool
-	*/
-	public function makeRoot(Validation $validation = NULL,$scope = NULL)
-	{
-		// If node already exists, and already root, exit
-		if ($this->loaded() AND $this->is_root())
-			return $this;
-
-		// delete node space first
-		if ($this->loaded())
-		{
-			$this->delete_space($this->left(), $this->size());
-		}
-
-		if (is_null($scope))
-		{
-			// Increment next scope
-			$scope = $this->getNextScope();
-		}
-		elseif ( ! $this->scope_available($scope))
-		{
-			return FALSE;
-		}
-
-		$this->{$this->scope_column} = $scope;
-		$this->{$this->level_column} = 1;
-		$this->{$this->left_column} = 1;
-		$this->{$this->right_column} = 2;
-
-		return parent::save($validation);		
 	}
 
 	/**
@@ -476,6 +433,9 @@ class ORM_MPTT extends ORM
 			$target->reload(); // Ensure we're using the latest version of $target
 		}
 
+		if( !$target->loaded() )
+			throw new Kohana_Exception('Parent not exists.');
+
 		$this->{$this->left_column}  = $target->{$copy_left_from} + $left_offset;
 		$this->{$this->right_column} = $this->{$this->left_column} + 1;
 		$this->{$this->level_column} = $target->{$this->level_column} + $level_offset;
@@ -567,11 +527,7 @@ class ORM_MPTT extends ORM
 	 */
 	public function save(Validation $validation = NULL)
 	{
-		if ( ! $this->loaded())
-		{
-			return $this->makeRoot($validation);
-		}
-		elseif ($this->loaded() === TRUE)
+		if ($this->loaded() === TRUE)
 		{
 			return parent::save($validation);
 		}
@@ -883,7 +839,6 @@ class ORM_MPTT extends ORM
 	}
 
 	/**
-	* called on makeRoot()
 	* @return integer next scope
 	*/
 	protected function getNextScope()
