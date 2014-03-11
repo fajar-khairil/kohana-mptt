@@ -536,17 +536,16 @@ class ORM_MPTT extends ORM
 	}
 
 	/**
-	 * Removes a node and it's descendants.
+	 * Removes a node.
 	 *
 	 * $usless_param prevents a strict error that breaks PHPUnit like hell!
 	 * @access public
-	 * @param bool $descendants remove the descendants?
 	 */
 	public function delete($usless_param = NULL)
 	{
 		$this->lock()->reload();
 
-		$result = DB::delete($this->_db->table_prefix().$this->_table_name)
+		$result = DB::delete($this->_table_name)
 			->where($this->left_column, '>=', $this->{$this->left_column})
 			->where($this->right_column, '<=', $this->{$this->right_column})
 			->where($this->scope_column, '=', $this->{$this->scope_column})
